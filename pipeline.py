@@ -27,6 +27,7 @@ def run_pipeline(
     quality: str = None,
     storyboard_model: str = None,
     manim_model: str = None,
+    pre_extracted_content: dict = None,
 ) -> dict:
     """
     End-to-end pipeline: PDF → educational Manim video (30-60 min).
@@ -41,6 +42,7 @@ def run_pipeline(
         quality:          Manim render quality (l/m/h/k)
         storyboard_model: Override storyboard LLM model name
         manim_model:      Override manim-coder model name
+        pre_extracted_content: Extracted PDF content to bypass PDF reading (useful for chunking)
 
     Returns:
         Dict with pipeline results
@@ -86,6 +88,12 @@ def run_pipeline(
             print(f"Loading existing chapter content from {chapter_content_file}")
             with open(chapter_content_file, encoding="utf-8") as f:
                 chapter_content = json.load(f)
+        elif pre_extracted_content:
+            print("Using pre-extracted chapter content for chunk processing.")
+            chapter_content = pre_extracted_content
+            # Save it so resume logic works for subsequent stages
+            with open(chapter_content_file, "w", encoding="utf-8") as f:
+                json.dump(chapter_content, f, indent=2, ensure_ascii=False)
         else:
             from stages.pdf_extractor import extract_pdf
             chapter_content = extract_pdf(str(pdf_path), output_path=chapter_content_file)

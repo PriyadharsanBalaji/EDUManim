@@ -4,12 +4,14 @@ import time
 import subprocess
 import traceback
 from pathlib import Path
+import copy
 
 # Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 from pipeline import run_pipeline
 from config import STORYBOARD_MODEL, MANIM_MODEL
+from stages.pdf_extractor import extract_pdf
 
 def pull_models():
     """Ensure required Ollama models are pulled."""
@@ -34,6 +36,8 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description="Batch run the Manim pipeline.")
     parser.add_argument("--first", type=str, help="Name of the PDF file to process first (e.g., 'Integers.pdf')")
+    parser.add_argument("--whole-book", action="store_true", help="Process the entire book iteratively by chunking")
+    parser.add_argument("--iterations-per-book", type=int, default=None, help="Max iterations/chunks to process per book")
     args = parser.parse_args()
 
     print("\n" + "="*60)
@@ -78,17 +82,67 @@ def main():
         start_time = time.time()
         
         try:
-            # We use default arguments. 
-            # You can change target_minutes or quality by editing these parameters.
-            result = run_pipeline(
-                pdf_path=str(pdf_path),
-                output_name=pdf_path.stem.lower().replace(" ", "_"),
-                target_minutes=45,       # default target
-                resume=True,             # resume if interrupted
-                plan_only=False,         # full run
-                start_stage=0,           # from beginning (will skip completed due to resume=True)
-                quality="m",             # medium quality 720p
-            )
+            output_name = pdf_path.stem.lower().replace(" ", "_")
+            
+            if args.whole_book:
+                print(f"--- Extracting entire book for chunking ---")
+                full_content = extract_pdf(str(pdf_path))
+                sections = full_content.get("sections", [])
+                
+                # Chunking strategy: 2 sections per chunk
+                chunk_size = 2
+                chunks = [sections[i:i + chunk_size] for i in range(0, len(sections), chunk_size)]
+                
+                max_iter = args.iterations_per_book if args.iterations_per_book else len(chunks)
+                chunk_videos = []
+                
+                for idx in range(min(max_iter, len(chunks))):
+                    print(f"\n>> Processing Chunk {idx+1}/{len(chunks)}")
+                    chunk_content = copy.deepcopy(full_content)
+                    chunk_content["sections"] = chunks[idx]
+                    
+                    chunk_output_name = f"{output_name}_part{idx+1}"
+                    result = run_pipeline(
+                        pdf_path=str(pdf_path),
+                        output_name=chunk_output_name,
+                        target_minutes=15, # smaller target for chunk
+                        resume=True,
+                        plan_only=False,
+                        start_stage=0,
+                        quality="m",
+                        pre_extracted_content=chunk_content
+                    )
+                    if result and "output" in result and os.path.exists(result["output"]):
+                        chunk_videos.append(result["output"])
+                
+                # Stitch videos
+                if chunk_videos:
+                    print(f"\n--- Stitching {len(chunk_videos)} chunk videos together ---")
+                    list_file_path = f"inputs/{output_name}_vid_list.txt"
+                    with open(list_file_path, "w") as lf:
+                        for vid in chunk_videos:
+                            # ffmpeg needs absolute paths or relative paths in proper format
+                            # Using forward slashes for ffmpeg compatibility
+                            vid_path = str(Path(vid).absolute()).replace('\\', '/')
+                            lf.write(f"file '{vid_path}'\n")
+                    
+                    final_merged_vid = f"outputs/{output_name}_complete.mp4"
+                    stitch_cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_file_path, "-c", "copy", final_merged_vid]
+                    subprocess.run(stitch_cmd, check=True)
+                    print(f"✅ Final merged video available at: {final_merged_vid}")
+            
+            else:
+                # Original logic
+                result = run_pipeline(
+                    pdf_path=str(pdf_path),
+                    output_name=output_name,
+                    target_minutes=45,       # default target
+                    resume=True,             # resume if interrupted
+                    plan_only=False,         # full run
+                    start_stage=0,           # from beginning
+                    quality="m",             # medium quality 720p
+                )
+            
             elapsed = time.time() - start_time
             print(f"\n✅ Successfully processed {pdf_path.name} in {elapsed/60:.1f} minutes")
             successes.append(pdf_path.name)

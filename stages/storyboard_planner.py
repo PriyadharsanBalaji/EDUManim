@@ -116,7 +116,7 @@ Return this EXACT JSON structure:
 
 SECTION PLAN — follow this order:
 1. HOOK (1-2 scenes): Jaw-dropping visual or paradox to grab attention
-2. HISTORY (4-6 scenes): Ancient origins -> Cantor -> modern set theory. Use the ancient_history data.
+2. HISTORY (0-1 scenes): Brief origin. Use the ancient_history data sparingly to avoid making the video too history-heavy.
 3. CORE CONCEPTS (15-25 scenes): Each concept from core_concepts gets 1-3 scenes.
    - First show intuition/analogy
    - Then formal definition

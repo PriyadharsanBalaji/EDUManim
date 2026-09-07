@@ -119,7 +119,7 @@ Return this EXACT JSON structure:
 }}
 
 CRITICAL INSTRUCTIONS:
-- For ancient_history: Include AT LEAST 4 entries spanning from ancient civilizations to modern mathematics
+- For ancient_history: Include AT MOST 1 brief entry for historical context. Do not over-focus on history.
 - For core_concepts: Cover EVERY concept in the chapter — don't skip any
 - For misconceptions: Include at least 5 common student errors
 - For fun_facts: Include at least 5 genuinely surprising facts

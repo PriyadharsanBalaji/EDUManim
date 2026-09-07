@@ -1,0 +1,44 @@
+# Goal Description
+
+The goal is to modify the `ConceptToCanvasCollaboration` pipeline to support processing an entire book iteratively (chunk-by-chunk) rather than stopping after generating a single video for the initial context limit. We will also add a script to keep the Ollama server alive during execution (especially useful for Kaggle environments), and finally push the modified code to a new remote repository (`EDUManim`).
+
+## User Review Required
+
+> [!IMPORTANT]  
+> Please review the chunking strategy. I plan to group the extracted sections of a PDF into "chunks" (e.g., 2-3 sections per chunk, or based on character length) and process each chunk as a separate iteration, generating a distinct video for each chunk (e.g., `integers_part1.mp4`, `integers_part2.mp4`).
+
+> [!IMPORTANT]
+> Since we will push to your GitHub repo, I will need you to provide your GitHub personal access token (PAT) or ensure your environment is already authenticated to push to `https://github.com/PriyadharsanBalaji/EDUManim.git` when the time comes. I will prepare the local git repository and run the push command.
+
+## Open Questions
+
+1. **Chunk Size:** How do you want to define a "chunk" for each iteration? Should it be a fixed number of sections (e.g., 2 sections per video) or based on character count?
+2. **Video Merging:** Do you want the videos for each chunk to be kept separate, or do you eventually want to merge all chunk videos into one massive video for the entire book?
+
+## Proposed Changes
+
+### 1. Ollama Keep-Alive Script
+#### [NEW] `keep_ollama_alive.sh`
+- A bash script that runs in an infinite loop, checking if the `ollama` process is running. If it's not, it will automatically restart `ollama serve`. You can run this in the background on Kaggle using `nohup bash keep_ollama_alive.sh &`.
+
+### 2. Core Pipeline Modifications
+#### [MODIFY] `pipeline.py`
+- Update `run_pipeline` to accept an optional pre-extracted `chapter_content` dictionary. This allows us to bypass the PDF extraction stage if we provide a manually chunked subset of the book.
+- Update output directory naming to handle suffixes (e.g., `_part1`, `_part2`) so each chunk gets its own workspace and output video.
+
+### 3. Batch Runner Modifications
+#### [MODIFY] `batch_run.py`
+- Add command-line arguments: `--whole-book` (flag) and `--iterations-per-book` (integer).
+- Implement logic to first run PDF extraction on the book, then split the `sections` into chunks.
+- Loop over the chunks (up to `--iterations-per-book`), calling `run_pipeline` for each chunk with the corresponding subset of sections.
+
+### 4. Git Initialization and Push
+- Run Git commands to initialize, commit, and push the updated codebase to the provided remote URL: `https://github.com/PriyadharsanBalaji/EDUManim.git` on the `main` branch.
+
+## Verification Plan
+
+### Automated Tests
+- N/A (We will verify script logic by dry-running `batch_run.py --whole-book --iterations-per-book 2`).
+
+### Manual Verification
+- We will verify that multiple chunk directories are created and that the keep-alive script correctly detects when Ollama is not running.

@@ -41,7 +41,7 @@ This stage acts as the "Subject Matter Expert". It doesn't write the script; it 
 ### Stage 2: Storyboard Planning (`stages/storyboard_planner.py`)
 This stage acts as the "Director". It takes the raw pedagogical concepts and maps them into a strict cinematic flow.
 - **Input:** `deep_analysis.json`
-- **The Prompt:** The LLM acts as an award-winning director creating 3Blue1Brown-style videos. We enforce a strict pedagogical arc: **Hook (1-2 scenes) → History (4-6 scenes) → Core Concepts (Intuition then Definition) → Misconceptions → Examples → Summary.**
+- **The Prompt:** The LLM acts as an award-winning director creating 3Blue1Brown-style videos. We enforce a strict pedagogical arc: **Hook (1-2 scenes) → History (0-1 scenes) → Core Concepts (Intuition then Definition) → Misconceptions → Examples → Summary.**
 - **Output Schema (`storyboard.json`):** This is the ultimate master blueprint. It generates an array of 50-80 individual "scenes". Each scene looks like this:
   ```json
   {
@@ -111,3 +111,10 @@ python pipeline.py --pdf iemh101.pdf --plan-only
 ```bash
 python pipeline.py --pdf iemh101.pdf --resume --stage 3
 ```
+
+---
+
+## 📝 Changelog
+
+### V2
+- **Reduced History Prompts:** The prompts in `deep_analyzer.py` and `storyboard_planner.py` have been heavily modified to reduce the amount of historical context generated. Previously, the pipeline asked for 4-6 scenes of history, which resulted in videos that were too heavily focused on history. In V2, the history requirement is reduced to 0-1 scenes for a more concise video.
